@@ -132,3 +132,62 @@ def test_get_package_with_no_versions(client, db_session):
     data = response.json()
     assert data["name"] == "empty-pkg"
     assert data["versions"] == []
+
+
+def test_download_specific_version(client, db_session, tmp_path):
+    from app.database import Package, Version
+    zip_content = b"PK\x03\x04fake zip content"
+    pkg = Package(name="dl-pkg", description="", author="")
+    db_session.add(pkg)
+    db_session.flush()
+
+    zip_path = tmp_path / "dl-pkg" / "1.0.0.zip"
+    zip_path.parent.mkdir(parents=True)
+    zip_path.write_bytes(zip_content)
+
+    db_session.add(Version(
+        package_id=pkg.id, version="1.0.0",
+        message="init", file_path="dl-pkg/1.0.0.zip"
+    ))
+    db_session.commit()
+
+    response = client.get("/api/packages/dl-pkg/1.0.0")
+    assert response.status_code == 200
+    assert "zip" in response.headers["content-type"]
+    assert response.content == zip_content
+
+
+def test_download_latest_resolves_highest_semver(client, db_session, tmp_path):
+    from app.database import Package, Version
+    pkg = Package(name="ver-pkg", description="", author="")
+    db_session.add(pkg)
+    db_session.flush()
+
+    for ver in ["1.0.0", "2.0.0", "1.9.0"]:
+        p = tmp_path / "ver-pkg" / f"{ver}.zip"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(f"content-{ver}".encode())
+        db_session.add(Version(
+            package_id=pkg.id, version=ver,
+            message="msg", file_path=f"ver-pkg/{ver}.zip"
+        ))
+    db_session.commit()
+
+    response = client.get("/api/packages/ver-pkg/latest")
+    assert response.status_code == 200
+    assert response.content == b"content-2.0.0"
+
+
+def test_download_package_not_found(client):
+    response = client.get("/api/packages/ghost/1.0.0")
+    assert response.status_code == 404
+
+
+def test_download_version_not_found(client, db_session):
+    from app.database import Package
+    pkg = Package(name="exists-pkg", description="", author="")
+    db_session.add(pkg)
+    db_session.commit()
+
+    response = client.get("/api/packages/exists-pkg/9.9.9")
+    assert response.status_code == 404

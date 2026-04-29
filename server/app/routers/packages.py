@@ -54,6 +54,35 @@ def list_packages(
     ]
 
 
+@router.get("/packages/{name}/{version}")
+def download_package(name: str, version: str, db: Session = Depends(get_db)):
+    pkg = db.query(Package).filter(Package.name == name).first()
+    if not pkg:
+        raise HTTPException(status_code=404, detail=f"Package '{name}' not found")
+
+    if version == "latest":
+        if not pkg.versions:
+            raise HTTPException(status_code=404, detail=f"Package '{name}' has no versions")
+        ver_record = max(pkg.versions, key=lambda v: SemVer(v.version))
+    else:
+        ver_record = next((v for v in pkg.versions if v.version == version), None)
+        if not ver_record:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Version '{version}' not found for package '{name}'",
+            )
+
+    file_path = Path(STORAGE_ROOT) / ver_record.file_path
+    if not file_path.exists():
+        raise HTTPException(status_code=500, detail="Package file not found on disk")
+
+    return FileResponse(
+        path=str(file_path),
+        media_type="application/zip",
+        filename=f"{name}-{ver_record.version}.zip",
+    )
+
+
 @router.get("/packages/{name}")
 def get_package(name: str, db: Session = Depends(get_db)):
     pkg = db.query(Package).filter(Package.name == name).first()
