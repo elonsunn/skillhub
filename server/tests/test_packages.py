@@ -119,3 +119,16 @@ def test_get_package_detail(client, db_session):
     assert len(data["versions"]) == 2
     assert data["versions"][0]["version"] == "1.1.0"  # newest first
     assert data["versions"][1]["version"] == "1.0.0"
+
+
+def test_get_package_with_no_versions(client, db_session):
+    from app.database import Package
+    pkg = Package(name="empty-pkg", description="No versions yet", author="alice")
+    db_session.add(pkg)
+    db_session.commit()
+
+    response = client.get("/api/packages/empty-pkg")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "empty-pkg"
+    assert data["versions"] == []
