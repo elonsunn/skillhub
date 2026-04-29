@@ -51,7 +51,6 @@ def push(message):
             "but push failed. You may need to revert it manually.",
             err=True,
         )
-        click.echo(f"Error: {e.detail}", err=True)
         sys.exit(1)
 
     click.echo(f"Pushed {name}@{new_version}")

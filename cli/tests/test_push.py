@@ -46,7 +46,6 @@ def test_push_api_error_shows_warning(config_dir, skillhub_yaml):
         result = CliRunner().invoke(cli, ["push", "-m", "fail"])
     assert result.exit_code != 0
     assert "Warning: local skillhub.yaml version was updated" in result.output
-    assert "Version conflict" in result.output
 
 
 def test_push_requires_message():
