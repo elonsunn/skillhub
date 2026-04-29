@@ -33,7 +33,7 @@ def list_packages(
 ):
     query = db.query(Package)
     if tag:
-        query = query.join(Tag).filter(Tag.tag_name == tag)
+        query = query.join(Tag).filter(Tag.tag_name == tag).distinct()
     packages = query.all()
     if search:
         s = search.lower()
