@@ -1,0 +1,5 @@
+.worktrees/
+server/data/
+cli/__pycache__/
+cli/*.egg-info/
+cli/.pytest_cache/
