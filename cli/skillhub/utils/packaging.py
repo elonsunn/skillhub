@@ -22,7 +22,7 @@ def build_zip(config_dir: Path, config: dict) -> Path:
         )
 
     ignore_spec = pathspec.PathSpec.from_lines(
-        "gitwildmatch", list(config.get("ignore", [])) + _ALWAYS_IGNORE
+        "gitignore", list(config.get("ignore", [])) + _ALWAYS_IGNORE
     )
 
     if including:
