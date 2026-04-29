@@ -21,6 +21,7 @@ def db_session(db_engine):
     Session = sessionmaker(bind=db_engine)
     session = Session()
     yield session
+    session.rollback()
     session.close()
 
 
