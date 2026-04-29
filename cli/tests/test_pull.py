@@ -67,3 +67,11 @@ def test_pull_api_error(config_dir, skillhub_yaml):
         result = CliRunner().invoke(cli, ["pull", "no-such-pkg"])
     assert result.exit_code != 0
     assert "Package not found" in result.output
+
+
+def test_pull_rejects_path_traversal(config_dir, skillhub_yaml):
+    zip_bytes = _make_zip(("../outside.txt", "malicious"))
+    with patch("skillhub.utils.api.download_package", return_value=zip_bytes):
+        result = CliRunner().invoke(cli, ["pull", "some-pkg"])
+    assert result.exit_code != 0
+    assert "unsafe path" in result.output

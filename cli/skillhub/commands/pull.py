@@ -35,6 +35,13 @@ def pull(name, version):
         with zipfile.ZipFile(zip_path) as zf:
             file_names = [n for n in zf.namelist() if not n.endswith("/")]
 
+        config_dir_resolved = config_dir.resolve()
+        for n in file_names:
+            target = (config_dir / n).resolve()
+            if not str(target).startswith(str(config_dir_resolved) + "/") and target != config_dir_resolved:
+                click.echo(f"Error: package contains unsafe path: {n}", err=True)
+                sys.exit(1)
+
         conflicts = [n for n in file_names if (config_dir / n).exists()]
         if conflicts:
             click.echo("Error: conflicting files already exist:", err=True)

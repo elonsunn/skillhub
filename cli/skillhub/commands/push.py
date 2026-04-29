@@ -46,6 +46,7 @@ def push(message):
     try:
         api.push_package(server, name, zip_path, metadata)
     except api.SkillHubAPIError as e:
+        click.echo(f"Error: {e.detail}", err=True)
         click.echo(
             f"Warning: local skillhub.yaml version was updated to {new_version} "
             "but push failed. You may need to revert it manually.",
