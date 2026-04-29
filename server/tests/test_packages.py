@@ -191,3 +191,97 @@ def test_download_version_not_found(client, db_session):
 
     response = client.get("/api/packages/exists-pkg/9.9.9")
     assert response.status_code == 404
+
+
+import io
+import json as _json
+import zipfile
+
+
+def _make_zip() -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("skills/hello/SKILL.md", "# Hello")
+    return buf.getvalue()
+
+
+def test_push_creates_new_package(client):
+    meta = _json.dumps({
+        "version": "1.0.0", "message": "initial release",
+        "description": "My package", "author": "alice", "tags": ["copilot"],
+    })
+    response = client.post(
+        "/api/packages/new-pkg",
+        data={"metadata": meta},
+        files={"file": ("new-pkg.zip", _make_zip(), "application/zip")},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"name": "new-pkg", "version": "1.0.0"}
+
+
+def test_push_new_version_on_existing_package(client):
+    zip_data = _make_zip()
+    meta_v1 = _json.dumps({"version": "1.0.0", "message": "init", "description": "", "author": "", "tags": ["t"]})
+    meta_v2 = _json.dumps({"version": "1.0.1", "message": "fix", "description": "", "author": "", "tags": ["t"]})
+
+    client.post("/api/packages/bump-pkg", data={"metadata": meta_v1}, files={"file": ("f.zip", zip_data, "application/zip")})
+    response = client.post("/api/packages/bump-pkg", data={"metadata": meta_v2}, files={"file": ("f.zip", zip_data, "application/zip")})
+
+    assert response.status_code == 200
+    assert response.json()["version"] == "1.0.1"
+
+
+def test_push_empty_tags_rejected(client):
+    meta = _json.dumps({"version": "1.0.0", "message": "init", "description": "", "author": "", "tags": []})
+    response = client.post(
+        "/api/packages/no-tags",
+        data={"metadata": meta},
+        files={"file": ("f.zip", _make_zip(), "application/zip")},
+    )
+    assert response.status_code == 400
+
+
+def test_push_same_version_rejected(client):
+    zip_data = _make_zip()
+    meta = _json.dumps({"version": "1.0.0", "message": "init", "description": "", "author": "", "tags": ["t"]})
+
+    client.post("/api/packages/dup-pkg", data={"metadata": meta}, files={"file": ("f.zip", zip_data, "application/zip")})
+    response = client.post("/api/packages/dup-pkg", data={"metadata": meta}, files={"file": ("f.zip", zip_data, "application/zip")})
+
+    assert response.status_code == 409
+
+
+def test_push_older_version_rejected(client):
+    zip_data = _make_zip()
+    meta_v2 = _json.dumps({"version": "2.0.0", "message": "v2", "description": "", "author": "", "tags": ["t"]})
+    meta_v1 = _json.dumps({"version": "1.0.0", "message": "old", "description": "", "author": "", "tags": ["t"]})
+
+    client.post("/api/packages/downgrade-pkg", data={"metadata": meta_v2}, files={"file": ("f.zip", zip_data, "application/zip")})
+    response = client.post("/api/packages/downgrade-pkg", data={"metadata": meta_v1}, files={"file": ("f.zip", zip_data, "application/zip")})
+
+    assert response.status_code == 409
+
+
+def test_push_tags_replaced_on_new_version(client):
+    zip_data = _make_zip()
+    meta_v1 = _json.dumps({"version": "1.0.0", "message": "init", "description": "", "author": "", "tags": ["old-tag"]})
+    meta_v2 = _json.dumps({"version": "1.0.1", "message": "update", "description": "", "author": "", "tags": ["new-tag"]})
+
+    client.post("/api/packages/tag-pkg", data={"metadata": meta_v1}, files={"file": ("f.zip", zip_data, "application/zip")})
+    client.post("/api/packages/tag-pkg", data={"metadata": meta_v2}, files={"file": ("f.zip", zip_data, "application/zip")})
+
+    response = client.get("/api/packages/tag-pkg")
+    tags = response.json()["tags"]
+    assert "new-tag" in tags
+    assert "old-tag" not in tags
+
+
+def test_push_zip_stored_and_downloadable(client):
+    zip_data = _make_zip()
+    meta = _json.dumps({"version": "1.0.0", "message": "init", "description": "", "author": "", "tags": ["t"]})
+
+    client.post("/api/packages/stored-pkg", data={"metadata": meta}, files={"file": ("f.zip", zip_data, "application/zip")})
+
+    response = client.get("/api/packages/stored-pkg/1.0.0")
+    assert response.status_code == 200
+    assert response.content == zip_data
