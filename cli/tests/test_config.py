@@ -48,7 +48,6 @@ def test_get_server_url_falls_back_to_config(monkeypatch):
     assert get_server_url({"server": "http://config"}) == "http://config"
 
 
-def test_get_server_url_missing_raises(monkeypatch):
+def test_get_server_url_missing_uses_default(monkeypatch):
     monkeypatch.delenv("SKILLHUB_SERVER", raising=False)
-    with pytest.raises(click.ClickException, match="Please set server address"):
-        get_server_url({})
+    assert get_server_url({}) == "http://localhost:8000"

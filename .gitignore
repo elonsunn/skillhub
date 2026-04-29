@@ -3,3 +3,9 @@ server/data/
 cli/__pycache__/
 cli/*.egg-info/
 cli/.pytest_cache/
+**/__pycache__
+**/*.pyc
+*.zip
+.github/
+**/**/__pycache__/
+

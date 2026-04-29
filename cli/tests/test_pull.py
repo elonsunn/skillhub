@@ -22,11 +22,19 @@ def test_pull_extracts_files(config_dir, skillhub_yaml):
     assert (config_dir / "skills" / "tool" / "SKILL.md").read_text() == "# Tool"
 
 
+def test_pull_accepts_dot_prefixed_paths(config_dir, skillhub_yaml):
+    zip_bytes = _make_zip(("./skills/skilla.md", "ok"))
+    with patch("skillhub.utils.api.download_package", return_value=zip_bytes):
+        result = CliRunner().invoke(cli, ["pull", "some-pkg"])
+    assert result.exit_code == 0, result.output
+    assert (config_dir / "skills" / "skilla.md").read_text() == "ok"
+
+
 def test_pull_uses_latest_by_default(config_dir, skillhub_yaml):
     zip_bytes = _make_zip(("agents/r.md", "agent"))
     with patch("skillhub.utils.api.download_package", return_value=zip_bytes) as mock_dl:
         CliRunner().invoke(cli, ["pull", "some-pkg"])
-    mock_dl.assert_called_once_with("http://localhost:8000", "some-pkg", "latest")
+    mock_dl.assert_called_once_with("http://localhost:8000", "some-pkg", version=None)
 
 
 def test_pull_specific_version(config_dir, skillhub_yaml):

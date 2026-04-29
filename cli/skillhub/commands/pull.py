@@ -1,8 +1,9 @@
 import sys
+import shutil
 import click
 import tempfile
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from skillhub.utils.platform import find_config_dir
 from skillhub.utils.config import load_config, get_server_url
 from skillhub.utils import api
@@ -19,11 +20,8 @@ def pull(name, version):
         config = {}
     server = get_server_url(config)
 
-    if version is None:
-        version = "latest"
-
     try:
-        zip_bytes = api.download_package(server, name, version)
+        zip_bytes = api.download_package(server, name, version=version)
     except api.SkillHubAPIError as e:
         click.echo(f"Error: {e.detail}", err=True)
         sys.exit(1)
@@ -32,17 +30,31 @@ def pull(name, version):
         zip_path = Path(tmp) / "package.zip"
         zip_path.write_bytes(zip_bytes)
 
-        with zipfile.ZipFile(zip_path) as zf:
-            file_names = [n for n in zf.namelist() if not n.endswith("/")]
-
         config_dir_resolved = config_dir.resolve()
-        for n in file_names:
-            target = (config_dir / n).resolve()
-            if not str(target).startswith(str(config_dir_resolved) + "/") and target != config_dir_resolved:
-                click.echo(f"Error: package contains unsafe path: {n}", err=True)
-                sys.exit(1)
+        file_entries = []
+        with zipfile.ZipFile(zip_path) as zf:
+            for info in zf.infolist():
+                if info.is_dir():
+                    continue
 
-        conflicts = [n for n in file_names if (config_dir / n).exists()]
+                normalized = info.filename.replace("\\", "/")
+                rel_posix = PurePosixPath(normalized)
+
+                if rel_posix.is_absolute() or ".." in rel_posix.parts:
+                    click.echo(f"Error: package contains unsafe path: {info.filename}", err=True)
+                    sys.exit(1)
+
+                rel_path = Path(*rel_posix.parts)
+                target = (config_dir / rel_path).resolve()
+                try:
+                    target.relative_to(config_dir_resolved)
+                except ValueError:
+                    click.echo(f"Error: package contains unsafe path: {info.filename}", err=True)
+                    sys.exit(1)
+
+                file_entries.append((info, rel_path))
+
+        conflicts = [str(rel_path).replace("\\", "/") for _, rel_path in file_entries if (config_dir / rel_path).exists()]
         if conflicts:
             click.echo("Error: conflicting files already exist:", err=True)
             for c in conflicts:
@@ -51,9 +63,13 @@ def pull(name, version):
             sys.exit(1)
 
         with zipfile.ZipFile(zip_path) as zf:
-            zf.extractall(config_dir)
+            for info, rel_path in file_entries:
+                target = config_dir / rel_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(info) as src, target.open("wb") as dst:
+                    shutil.copyfileobj(src, dst)
 
-    setup_files = [n for n in file_names if Path(n).name == "SETUP.md"]
+    setup_files = [str(rel_path).replace("\\", "/") for _, rel_path in file_entries if rel_path.name == "SETUP.md"]
     if setup_files:
         click.echo(
             "Found setup guides in the following locations, "

@@ -30,6 +30,4 @@ def get_server_url(config: dict) -> str:
     server = config.get("server")
     if server:
         return server
-    raise click.ClickException(
-        "Please set server address via SKILLHUB_SERVER env or server field in skillhub.yaml"
-    )
+    return "http://localhost:8000"

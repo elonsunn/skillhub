@@ -38,7 +38,9 @@ def get_package(server: str, name: str):
     return resp.json()
 
 
-def download_package(server: str, name: str, version: str) -> bytes:
+def download_package(server: str, name: str, version: str = None) -> bytes:
+    if version is None:
+        version = "latest"
     resp = requests.get(f"{server}/api/packages/{name}/{version}")
     _raise_for_error(resp)
     return resp.content

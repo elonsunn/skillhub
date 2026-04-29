@@ -6,44 +6,44 @@ from skillhub.utils import api
 
 
 @click.command(name="list")
-@click.option("--online", is_flag=True, default=False)
-def list_cmd(online):
-    if online:
-        try:
-            config = load_config(find_config_dir())
-        except click.ClickException:
-            config = {}
-        server = get_server_url(config)
-        try:
-            packages = api.list_packages(server)
-        except api.SkillHubAPIError as e:
-            click.echo(f"Error: {e.detail}", err=True)
-            sys.exit(1)
-        for pkg in packages:
-            tags_str = ", ".join(pkg.get("tags", []))
-            click.echo(
-                f"{pkg['name']}  {pkg['latest_version']}  "
-                f"{pkg['author']}  [{tags_str}]  {pkg['description']}"
-            )
-    else:
+@click.option("--installed", is_flag=True, default=False, help="List installed skills")
+def list_cmd(installed):
+    if installed:
         config_dir = find_config_dir()
-        config = load_config(config_dir)
-        if config.get("including"):
-            scope = "including: " + ", ".join(config["including"])
-        elif config.get("excluding"):
-            scope = "excluding: " + ", ".join(config["excluding"])
-        else:
-            scope = "all"
-        click.echo(f"Name:        {config.get('name', '')}")
-        click.echo(f"Version:     {config.get('version', '')}")
-        click.echo(f"Description: {config.get('description', '')}")
-        click.echo(f"Author:      {config.get('author', '')}")
-        click.echo(f"Tags:        {', '.join(config.get('tags', []))}")
-        click.echo(f"Server:      {config.get('server', '')}")
-        click.echo(f"Scope:       {scope}")
-        for subdir in ["skills", "agents", "instructions"]:
-            full = config_dir / subdir
-            if full.is_dir():
-                click.echo(f"\n{subdir}/")
-                for item in sorted(full.iterdir()):
-                    click.echo(f"  {item.name}")
+        rows = []
+        for skill_type in ["skills", "agents"]:
+            root = config_dir / skill_type
+            if not root.is_dir():
+                continue
+            for item in sorted(root.iterdir()):
+                if item.is_dir():
+                    rows.append((skill_type, item.name))
+
+        click.echo(f"{'TYPE':<10} {'SKILL NAME'}")
+        click.echo(f"{'-' * 10} {'-' * 40}")
+        for skill_type, skill_name in rows:
+            click.echo(f"{skill_type:<10} {skill_name}")
+        return
+
+    try:
+        config = load_config(find_config_dir())
+    except click.ClickException:
+        config = {}
+    server = get_server_url(config)
+    try:
+        packages = api.list_packages(server)
+    except api.SkillHubAPIError as e:
+        click.echo(f"Error: {e.detail}", err=True)
+        sys.exit(1)
+
+    click.echo(f"{'NAME':<24} {'VERSION':<12} {'AUTHOR':<18} {'TAGS':<24} DESCRIPTION")
+    click.echo(f"{'-' * 24} {'-' * 12} {'-' * 18} {'-' * 24} {'-' * 40}")
+    for pkg in packages:
+        tags_str = ", ".join(pkg.get("tags", []))
+        click.echo(
+            f"{pkg.get('name', ''):<24} "
+            f"{(pkg.get('latest_version') or ''):<12} "
+            f"{pkg.get('author', ''):<18} "
+            f"{tags_str:<24} "
+            f"{pkg.get('description', '')}"
+        )
