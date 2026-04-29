@@ -52,3 +52,24 @@ def list_packages(
         }
         for p in packages
     ]
+
+
+@router.get("/packages/{name}")
+def get_package(name: str, db: Session = Depends(get_db)):
+    pkg = db.query(Package).filter(Package.name == name).first()
+    if not pkg:
+        raise HTTPException(status_code=404, detail=f"Package '{name}' not found")
+    return {
+        "name": pkg.name,
+        "description": pkg.description,
+        "author": pkg.author,
+        "tags": [t.tag_name for t in pkg.tags],
+        "versions": [
+            {
+                "version": v.version,
+                "message": v.message,
+                "created_at": v.created_at.isoformat() if v.created_at else None,
+            }
+            for v in sorted(pkg.versions, key=lambda v: SemVer(v.version), reverse=True)
+        ],
+    }

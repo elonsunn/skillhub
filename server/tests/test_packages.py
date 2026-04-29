@@ -87,3 +87,35 @@ def test_list_packages_filter_by_tag(client, db_session):
     data = response.json()
     assert len(data) == 1
     assert data[0]["name"] == "pkg-a"
+
+
+def test_get_package_not_found(client):
+    response = client.get("/api/packages/nonexistent")
+    assert response.status_code == 404
+
+
+def test_get_package_detail(client, db_session):
+    from app.database import Package, Version, Tag
+    pkg = Package(name="my-pkg", description="My package", author="tom")
+    db_session.add(pkg)
+    db_session.flush()
+    db_session.add(Tag(package_id=pkg.id, tag_name="copilot"))
+    db_session.add(Version(
+        package_id=pkg.id, version="1.0.0",
+        message="initial release", file_path="my-pkg/1.0.0.zip"
+    ))
+    db_session.add(Version(
+        package_id=pkg.id, version="1.1.0",
+        message="add feature", file_path="my-pkg/1.1.0.zip"
+    ))
+    db_session.commit()
+
+    response = client.get("/api/packages/my-pkg")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "my-pkg"
+    assert data["author"] == "tom"
+    assert "copilot" in data["tags"]
+    assert len(data["versions"]) == 2
+    assert data["versions"][0]["version"] == "1.1.0"  # newest first
+    assert data["versions"][1]["version"] == "1.0.0"
