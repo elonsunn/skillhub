@@ -1,0 +1,11 @@
+services:
+  server:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/skillhub.db:/app/data/skillhub.db
+      - ./data/storage:/app/storage
+    environment:
+      - DATABASE_URL=sqlite:////app/data/skillhub.db
+      - STORAGE_ROOT=/app/storage
