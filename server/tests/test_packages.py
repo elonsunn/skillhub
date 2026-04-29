@@ -285,3 +285,32 @@ def test_push_zip_stored_and_downloadable(client):
     response = client.get("/api/packages/stored-pkg/1.0.0")
     assert response.status_code == 200
     assert response.content == zip_data
+
+
+def test_push_invalid_metadata_json_rejected(client):
+    response = client.post(
+        "/api/packages/bad-meta",
+        data={"metadata": "not-valid-json"},
+        files={"file": ("f.zip", _make_zip(), "application/zip")},
+    )
+    assert response.status_code == 422
+
+
+def test_push_missing_version_rejected(client):
+    meta = _json.dumps({"message": "no version", "description": "", "author": "", "tags": ["t"]})
+    response = client.post(
+        "/api/packages/missing-ver",
+        data={"metadata": meta},
+        files={"file": ("f.zip", _make_zip(), "application/zip")},
+    )
+    assert response.status_code == 422
+
+
+def test_push_invalid_semver_rejected(client):
+    meta = _json.dumps({"version": "not-semver", "message": "bad", "description": "", "author": "", "tags": ["t"]})
+    response = client.post(
+        "/api/packages/bad-semver",
+        data={"metadata": meta},
+        files={"file": ("f.zip", _make_zip(), "application/zip")},
+    )
+    assert response.status_code == 422
