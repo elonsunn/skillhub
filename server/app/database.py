@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Column, DateTime, ForeignKey, Integer, String, Text,
-    UniqueConstraint, create_engine,
+    UniqueConstraint, create_engine, text,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 
@@ -35,6 +35,7 @@ class Version(Base):
     version = Column(String, nullable=False)
     message = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
+    contents = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     package = relationship("Package", back_populates="versions")
@@ -63,3 +64,8 @@ def get_db():
 def init_db():
     os.makedirs("data", exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    with engine.connect() as conn:
+        cols = [r[1] for r in conn.execute(text("PRAGMA table_info(versions)"))]
+        if "contents" not in cols:
+            conn.execute(text("ALTER TABLE versions ADD COLUMN contents TEXT"))
+            conn.commit()

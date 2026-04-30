@@ -1,6 +1,36 @@
 from app.database import Package, Version, Tag
 
 
+def test_version_stores_contents(db_session):
+    import json
+    pkg = Package(name="contents-test", description="", author="")
+    db_session.add(pkg)
+    db_session.flush()
+    v = Version(
+        package_id=pkg.id, version="1.0.0",
+        message="init", file_path="contents-test/1.0.0.zip",
+        contents=json.dumps(["skills/foo", "agents/bar"]),
+    )
+    db_session.add(v)
+    db_session.commit()
+    result = db_session.query(Version).filter_by(package_id=pkg.id).first()
+    assert json.loads(result.contents) == ["skills/foo", "agents/bar"]
+
+
+def test_version_contents_defaults_null(db_session):
+    pkg = Package(name="null-contents", description="", author="")
+    db_session.add(pkg)
+    db_session.flush()
+    v = Version(
+        package_id=pkg.id, version="1.0.0",
+        message="init", file_path="null-contents/1.0.0.zip",
+    )
+    db_session.add(v)
+    db_session.commit()
+    result = db_session.query(Version).filter_by(package_id=pkg.id).first()
+    assert result.contents is None
+
+
 def test_package_model_relationships(db_session):
     pkg = Package(name="test-pkg", description="A test package", author="alice")
     db_session.add(pkg)
