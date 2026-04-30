@@ -1,8 +1,9 @@
+import json
 from app.database import Package, Tag, Version
 
 
 def _seed_pkg(db_session, name="my-skill", description="A skill", author="alice",
-              tag="copilot", version="1.0.0"):
+              tag="copilot", version="1.0.0", contents=None):
     pkg = Package(name=name, description=description, author=author)
     db_session.add(pkg)
     db_session.flush()
@@ -10,6 +11,7 @@ def _seed_pkg(db_session, name="my-skill", description="A skill", author="alice"
     db_session.add(Version(
         package_id=pkg.id, version=version,
         message="initial release", file_path=f"{name}/{version}.zip",
+        contents=json.dumps(contents) if contents is not None else None,
     ))
     db_session.commit()
     return pkg
@@ -136,3 +138,46 @@ def test_skill_detail_close_targets_drawer(client, db_session):
     _seed_pkg(db_session, name="my-skill")
     response = client.get("/ui/skills/my-skill")
     assert 'hx-target="#drawer-content"' in response.text
+
+
+def test_skill_version_contents_returns_fragment(client, db_session):
+    pkg = Package(name="frag-pkg", description="", author="")
+    db_session.add(pkg)
+    db_session.flush()
+    db_session.add(Version(
+        package_id=pkg.id, version="1.0.0",
+        message="init", file_path="frag-pkg/1.0.0.zip",
+        contents=json.dumps(["skills/foo", "agents/bar"]),
+    ))
+    db_session.commit()
+    response = client.get("/ui/skills/frag-pkg/1.0.0/contents")
+    assert response.status_code == 200
+    assert "skills/foo" in response.text
+    assert "agents/bar" in response.text
+
+
+def test_skill_version_contents_empty_shows_placeholder(client, db_session):
+    pkg = Package(name="empty-frag", description="", author="")
+    db_session.add(pkg)
+    db_session.flush()
+    db_session.add(Version(
+        package_id=pkg.id, version="1.0.0",
+        message="init", file_path="empty-frag/1.0.0.zip",
+    ))
+    db_session.commit()
+    response = client.get("/ui/skills/empty-frag/1.0.0/contents")
+    assert response.status_code == 200
+    assert "No contents recorded" in response.text
+
+
+def test_skill_version_contents_package_not_found(client):
+    response = client.get("/ui/skills/ghost/1.0.0/contents")
+    assert response.status_code == 404
+
+
+def test_skill_version_contents_version_not_found(client, db_session):
+    pkg = Package(name="found-pkg", description="", author="")
+    db_session.add(pkg)
+    db_session.commit()
+    response = client.get("/ui/skills/found-pkg/9.9.9/contents")
+    assert response.status_code == 404

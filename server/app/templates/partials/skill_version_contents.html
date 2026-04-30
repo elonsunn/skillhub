@@ -1,0 +1,9 @@
+{% if contents %}
+<ul class="space-y-1">
+  {% for item in contents %}
+  <li class="text-xs font-mono text-gray-700 bg-gray-50 rounded px-2 py-1">{{ item }}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-xs text-gray-400 italic">No contents recorded for this version.</p>
+{% endif %}

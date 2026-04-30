@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -86,6 +87,8 @@ def skill_detail(request: Request, name: str, db: Session = Depends(get_db)):
     if not pkg:
         return Response(status_code=404)
     versions = sorted(pkg.versions, key=lambda v: SemVer(v.version), reverse=True)
+    latest_ver = versions[0] if versions else None
+    contents = json.loads(latest_ver.contents) if latest_ver and latest_ver.contents else []
     pkg_data = {
         "name": pkg.name,
         "description": pkg.description or "",
@@ -104,7 +107,23 @@ def skill_detail(request: Request, name: str, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         request=request,
         name="partials/skill_detail.html",
-        context={"pkg": pkg_data},
+        context={"pkg": pkg_data, "contents": contents},
+    )
+
+
+@router.get("/ui/skills/{name}/{version}/contents", response_class=HTMLResponse)
+def skill_version_contents(request: Request, name: str, version: str, db: Session = Depends(get_db)):
+    pkg = db.query(Package).filter(Package.name == name).first()
+    if not pkg:
+        return Response(status_code=404)
+    ver = next((v for v in pkg.versions if v.version == version), None)
+    if not ver:
+        return Response(status_code=404)
+    contents = json.loads(ver.contents) if ver.contents else []
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/skill_version_contents.html",
+        context={"contents": contents},
     )
 
 
