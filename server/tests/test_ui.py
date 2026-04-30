@@ -64,3 +64,26 @@ def test_skill_grid_empty(client):
     response = client.get("/ui/skills")
     assert response.status_code == 200
     assert "No skills found" in response.text
+
+
+def test_skill_detail_returns_fragment(client, db_session):
+    _seed_pkg(db_session, name="my-skill", description="A great skill",
+              author="alice", version="1.2.0")
+    response = client.get("/ui/skills/my-skill")
+    assert response.status_code == 200
+    assert "my-skill" in response.text
+    assert "alice" in response.text
+    assert "1.2.0" in response.text
+    assert "skillhub pull my-skill" in response.text
+    assert "initial release" in response.text
+
+
+def test_skill_detail_not_found(client):
+    response = client.get("/ui/skills/nonexistent")
+    assert response.status_code == 404
+
+
+def test_empty_route_returns_empty(client):
+    response = client.get("/ui/empty")
+    assert response.status_code == 200
+    assert response.text == ""

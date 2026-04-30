@@ -76,3 +76,36 @@ def skill_grid(
         name="partials/skill_grid.html",
         context={"packages": pkgs_data},
     )
+
+
+@router.get("/ui/skills/{name}", response_class=HTMLResponse)
+def skill_detail(request: Request, name: str, db: Session = Depends(get_db)):
+    pkg = db.query(Package).filter(Package.name == name).first()
+    if not pkg:
+        return Response(status_code=404)
+    versions = sorted(pkg.versions, key=lambda v: SemVer(v.version), reverse=True)
+    pkg_data = {
+        "name": pkg.name,
+        "description": pkg.description or "",
+        "author": pkg.author or "",
+        "tags": [t.tag_name for t in pkg.tags],
+        "latest_version": _latest_version(pkg),
+        "versions": [
+            {
+                "version": v.version,
+                "message": v.message,
+                "created_at": v.created_at.strftime("%Y-%m-%d") if v.created_at else "",
+            }
+            for v in versions
+        ],
+    }
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/skill_detail.html",
+        context={"pkg": pkg_data},
+    )
+
+
+@router.get("/ui/empty", response_class=HTMLResponse)
+def empty():
+    return HTMLResponse(content="")
