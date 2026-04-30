@@ -1,1 +1,25 @@
-<div>{{ pkg.name }}</div>
+<div
+  class="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all"
+  hx-get="/ui/skills/{{ pkg.name }}"
+  hx-target="#detail-panel"
+>
+  <div class="flex items-start justify-between mb-2">
+    <h3 class="font-semibold text-gray-900 text-sm">{{ pkg.name }}</h3>
+    {% if pkg.latest_version %}
+    <span class="ml-2 px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 rounded-full flex-shrink-0">
+      v{{ pkg.latest_version }}
+    </span>
+    {% endif %}
+  </div>
+  {% if pkg.author %}
+  <p class="text-xs text-gray-400 mb-2">{{ pkg.author }}</p>
+  {% endif %}
+  {% if pkg.description %}
+  <p class="text-xs text-gray-600 truncate mb-3">{{ pkg.description }}</p>
+  {% endif %}
+  <div class="flex flex-wrap gap-1">
+    {% for tag in pkg.tags %}
+    <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded-full">{{ tag }}</span>
+    {% endfor %}
+  </div>
+</div>

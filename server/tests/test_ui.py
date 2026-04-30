@@ -27,3 +27,40 @@ def test_index_renders_all_tags(client, db_session):
     response = client.get("/")
     assert "copilot" in response.text
     assert "review" in response.text
+
+
+def test_skill_grid_returns_skills(client, db_session):
+    _seed_pkg(db_session)
+    response = client.get("/ui/skills")
+    assert response.status_code == 200
+    assert "my-skill" in response.text
+
+
+def test_skill_grid_search_by_name(client, db_session):
+    _seed_pkg(db_session, name="copilot-tools")
+    _seed_pkg(db_session, name="review-agents")
+    response = client.get("/ui/skills?search=copilot")
+    assert "copilot-tools" in response.text
+    assert "review-agents" not in response.text
+
+
+def test_skill_grid_search_by_description(client, db_session):
+    _seed_pkg(db_session, name="pkg-a", description="code review tools")
+    _seed_pkg(db_session, name="pkg-b", description="presentation tools")
+    response = client.get("/ui/skills?search=review")
+    assert "pkg-a" in response.text
+    assert "pkg-b" not in response.text
+
+
+def test_skill_grid_filter_by_tag(client, db_session):
+    _seed_pkg(db_session, name="pkg-a", tag="copilot")
+    _seed_pkg(db_session, name="pkg-b", tag="review")
+    response = client.get("/ui/skills?tag=copilot")
+    assert "pkg-a" in response.text
+    assert "pkg-b" not in response.text
+
+
+def test_skill_grid_empty(client):
+    response = client.get("/ui/skills")
+    assert response.status_code == 200
+    assert "No skills found" in response.text

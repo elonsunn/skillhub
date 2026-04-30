@@ -42,3 +42,37 @@ def index(request: Request, db: Session = Depends(get_db)):
         name="base.html",
         context={"packages": pkgs_data, "all_tags": all_tags, "active_tag": ""},
     )
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def skill_grid(
+    request: Request,
+    search: Optional[str] = None,
+    tag: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(Package)
+    if tag:
+        query = query.join(Tag).filter(Tag.tag_name == tag).distinct()
+    packages = query.all()
+    if search:
+        s = search.lower()
+        packages = [
+            p for p in packages
+            if s in (p.name or "").lower() or s in (p.description or "").lower()
+        ]
+    pkgs_data = [
+        {
+            "name": p.name,
+            "description": p.description or "",
+            "author": p.author or "",
+            "tags": [t.tag_name for t in p.tags],
+            "latest_version": _latest_version(p),
+        }
+        for p in packages
+    ]
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/skill_grid.html",
+        context={"packages": pkgs_data},
+    )
