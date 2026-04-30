@@ -41,6 +41,7 @@ def push(message):
         "description": config.get("description", ""),
         "author": config.get("author", ""),
         "tags": config.get("tags", []),
+        "contents": config.get("including", []),
     }
 
     try:

@@ -52,3 +52,26 @@ def test_push_api_error_shows_warning(config_dir, skillhub_yaml):
 def test_push_requires_message():
     result = CliRunner().invoke(cli, ["push"])
     assert result.exit_code != 0
+
+
+def test_push_sends_contents_from_including(config_dir, skillhub_yaml):
+    import yaml as _yaml
+    data = _yaml.safe_load((config_dir / "skillhub.yaml").read_text())
+    data["including"] = ["skills/my-tool", "agents/reviewer"]
+    (config_dir / "skillhub.yaml").write_text(_yaml.dump(data))
+    (config_dir / "skills").mkdir()
+    (config_dir / "skills" / "my-tool").mkdir()
+    (config_dir / "skills" / "my-tool" / "SKILL.md").write_text("skill")
+
+    captured = {}
+
+    def fake_push(server, name, zip_path, metadata):
+        captured.update(metadata)
+        return {"name": name, "version": metadata["version"]}
+
+    with patch("skillhub.utils.api.get_package", return_value=None), \
+         patch("skillhub.utils.api.push_package", side_effect=fake_push):
+        result = CliRunner().invoke(cli, ["push", "-m", "test"])
+
+    assert result.exit_code == 0, result.output
+    assert captured.get("contents") == ["skills/my-tool", "agents/reviewer"]
