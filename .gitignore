@@ -11,4 +11,5 @@ cli/.pytest_cache/
 *.db
 **/plans/*.md
 docs/
+.env
 
