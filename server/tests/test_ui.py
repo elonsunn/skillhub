@@ -181,3 +181,25 @@ def test_skill_version_contents_version_not_found(client, db_session):
     db_session.commit()
     response = client.get("/ui/skills/found-pkg/9.9.9/contents")
     assert response.status_code == 404
+
+
+def test_skill_detail_shows_contents_section(client, db_session):
+    _seed_pkg(db_session, name="content-skill", contents=["skills/foo", "agents/bar"])
+    response = client.get("/ui/skills/content-skill")
+    assert response.status_code == 200
+    assert "skills/foo" in response.text
+    assert "agents/bar" in response.text
+
+
+def test_skill_detail_no_contents_shows_placeholder(client, db_session):
+    _seed_pkg(db_session, name="empty-contents-skill")
+    response = client.get("/ui/skills/empty-contents-skill")
+    assert response.status_code == 200
+    assert "No contents recorded" in response.text
+
+
+def test_skill_detail_version_rows_have_htmx_contents_get(client, db_session):
+    _seed_pkg(db_session, name="htmx-skill", version="2.0.0")
+    response = client.get("/ui/skills/htmx-skill")
+    assert 'hx-get="/ui/skills/htmx-skill/2.0.0/contents"' in response.text
+    assert 'hx-target="#version-contents"' in response.text
