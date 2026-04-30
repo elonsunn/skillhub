@@ -14,12 +14,6 @@ _ALWAYS_IGNORE = [
 
 def build_zip(config_dir: Path, config: dict) -> Path:
     including = config.get("including")
-    excluding = config.get("excluding")
-
-    if including and excluding:
-        raise click.ClickException(
-            "Cannot use both including and excluding in skillhub.yaml"
-        )
 
     ignore_spec = pathspec.PathSpec.from_lines(
         "gitignore", list(config.get("ignore", [])) + _ALWAYS_IGNORE
@@ -35,15 +29,6 @@ def build_zip(config_dir: Path, config: dict) -> Path:
                 candidates.extend(f for f in p.rglob("*") if f.is_file())
     else:
         candidates = [f for f in config_dir.rglob("*") if f.is_file()]
-        if excluding:
-            excluded = set()
-            for exc in excluding:
-                p = config_dir / exc
-                if p.is_file():
-                    excluded.add(p)
-                elif p.is_dir():
-                    excluded.update(f for f in p.rglob("*") if f.is_file())
-            candidates = [f for f in candidates if f not in excluded]
 
     files_to_zip = [
         f for f in candidates

@@ -55,17 +55,6 @@ def test_including_limits_scope(pkg_dir):
     assert "copilot-instructions.md" not in names
 
 
-def test_excluding_removes_paths(pkg_dir):
-    names = _names(build_zip(pkg_dir, {"name": "mypkg", "tags": ["t"], "excluding": ["agents"]}))
-    assert "agents/reviewer.md" not in names
-    assert "copilot-instructions.md" in names
-
-
-def test_both_including_and_excluding_raises(pkg_dir):
-    with pytest.raises(click.ClickException, match="Cannot use both"):
-        build_zip(pkg_dir, {"name": "mypkg", "tags": ["t"], "including": ["skills"], "excluding": ["agents"]})
-
-
 def test_ignore_rules_applied(pkg_dir):
     (pkg_dir / ".env").write_text("SECRET=abc")
     names = _names(build_zip(pkg_dir, {"name": "mypkg", "tags": ["t"], "ignore": [".env"]}))
