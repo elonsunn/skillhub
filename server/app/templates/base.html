@@ -2,9 +2,84 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SkillHub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 </head>
-<body>
-  <h1>SkillHub</h1>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+
+  <header class="bg-white border-b border-gray-200 px-6 py-4">
+    <h1 class="text-2xl font-bold text-indigo-600">SkillHub</h1>
+  </header>
+
+  <div class="flex h-[calc(100vh-64px)]">
+
+    <!-- Left column -->
+    <div class="flex flex-col flex-1 min-w-0">
+
+      <!-- Sticky toolbar -->
+      <div class="sticky top-0 bg-gray-50 border-b border-gray-200 px-6 py-4 z-10">
+        <input
+          type="text"
+          name="search"
+          id="search-input"
+          placeholder="Search skills..."
+          class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 mb-3"
+          hx-get="/ui/skills"
+          hx-trigger="input delay:300ms"
+          hx-include="[name='search'],[name='tag']"
+          hx-target="#skill-grid"
+        />
+        <input type="hidden" name="tag" id="active-tag" value="">
+        <div class="flex flex-wrap gap-2">
+          {% for tag in all_tags %}
+          <button
+            class="tag-pill px-3 py-1 rounded-full text-xs font-medium border transition-colors bg-white text-gray-600 border-gray-300 hover:border-indigo-400"
+            data-tag="{{ tag }}"
+            type="button"
+            onclick="selectTag('{{ tag }}')"
+          >{{ tag }}</button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Skill grid -->
+      <div class="flex-1 overflow-y-auto px-6 py-4">
+        <div id="skill-grid">
+          {% include "partials/skill_grid.html" %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: detail panel -->
+    <div id="detail-panel" class="w-2/5 border-l border-gray-200 bg-white overflow-y-auto">
+    </div>
+
+  </div>
+
+  <script>
+    function selectTag(tag) {
+      const input = document.getElementById('active-tag');
+      const newTag = input.value === tag ? '' : tag;
+      input.value = newTag;
+      document.querySelectorAll('.tag-pill').forEach(pill => {
+        const isActive = pill.dataset.tag === newTag && newTag !== '';
+        pill.classList.toggle('bg-indigo-600', isActive);
+        pill.classList.toggle('text-white', isActive);
+        pill.classList.toggle('border-indigo-600', isActive);
+        pill.classList.toggle('bg-white', !isActive);
+        pill.classList.toggle('text-gray-600', !isActive);
+        pill.classList.toggle('border-gray-300', !isActive);
+      });
+      const search = document.getElementById('search-input').value;
+      htmx.ajax('GET', '/ui/skills', {
+        target: '#skill-grid',
+        swap: 'innerHTML',
+        values: { search: search, tag: newTag },
+      });
+    }
+  </script>
+
 </body>
 </html>

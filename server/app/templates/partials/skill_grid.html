@@ -1,0 +1,9 @@
+{% if packages %}
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+  {% for pkg in packages %}
+  {% include "partials/skill_card.html" %}
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-gray-400 text-sm text-center py-12">No skills found.</p>
+{% endif %}
