@@ -87,3 +87,33 @@ def test_empty_route_returns_empty(client):
     response = client.get("/ui/empty")
     assert response.status_code == 200
     assert response.text == ""
+
+
+def test_skill_grid_filter_by_multiple_tags_and(client, db_session):
+    # pkg-a: copilot + review (should appear)
+    # pkg-b: copilot only (should be excluded — missing review)
+    # pkg-c: review only (should be excluded — missing copilot)
+    pkg_a = Package(name="pkg-a", description="", author="")
+    pkg_b = Package(name="pkg-b", description="", author="")
+    pkg_c = Package(name="pkg-c", description="", author="")
+    db_session.add_all([pkg_a, pkg_b, pkg_c])
+    db_session.flush()
+    db_session.add(Tag(package_id=pkg_a.id, tag_name="copilot"))
+    db_session.add(Tag(package_id=pkg_a.id, tag_name="review"))
+    db_session.add(Tag(package_id=pkg_b.id, tag_name="copilot"))
+    db_session.add(Tag(package_id=pkg_c.id, tag_name="review"))
+    for pkg in [pkg_a, pkg_b, pkg_c]:
+        db_session.add(Version(package_id=pkg.id, version="1.0.0", message="init", file_path=f"{pkg.name}/1.0.0.zip"))
+    db_session.commit()
+    response = client.get("/ui/skills?tag=copilot&tag=review")
+    assert "pkg-a" in response.text
+    assert "pkg-b" not in response.text
+    assert "pkg-c" not in response.text
+
+
+def test_skill_grid_no_tags_returns_all(client, db_session):
+    _seed_pkg(db_session, name="pkg-a")
+    _seed_pkg(db_session, name="pkg-b")
+    response = client.get("/ui/skills")
+    assert "pkg-a" in response.text
+    assert "pkg-b" in response.text

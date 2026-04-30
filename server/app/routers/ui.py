@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from packaging.version import Version as SemVer
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.database import Package, Tag, get_db
 
@@ -48,12 +48,14 @@ def index(request: Request, db: Session = Depends(get_db)):
 def skill_grid(
     request: Request,
     search: Optional[str] = None,
-    tag: Optional[str] = None,
+    tag: list[str] = Query(default=[]),
     db: Session = Depends(get_db),
 ):
     query = db.query(Package)
-    if tag:
-        query = query.join(Tag).filter(Tag.tag_name == tag).distinct()
+    for t in tag:
+        alias = aliased(Tag)
+        query = query.join(alias, Package.id == alias.package_id).filter(alias.tag_name == t)
+    query = query.distinct()
     packages = query.all()
     if search:
         s = search.lower()
