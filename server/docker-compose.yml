@@ -9,3 +9,5 @@ services:
     environment:
       - DATABASE_URL=sqlite:////app/data/skillhub.db
       - STORAGE_ROOT=/app/storage
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}

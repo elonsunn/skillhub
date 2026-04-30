@@ -11,7 +11,7 @@ def list_cmd(installed):
     if installed:
         config_dir = find_config_dir()
         rows = []
-        for skill_type in ["skills", "agents"]:
+        for skill_type in ["skills", "agents", "instructions"]:
             root = config_dir / skill_type
             if not root.is_dir():
                 continue

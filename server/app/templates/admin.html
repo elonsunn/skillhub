@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillHub Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body class="bg-slate-50 text-gray-900 min-h-screen font-sans antialiased">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-100 px-6 py-0 h-16 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-6">
+            <a href="/" class="flex items-center gap-3">
+                <div
+                    class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-sm">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2.5"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                    </svg>
+                </div>
+                <span class="text-lg font-semibold text-gray-900 tracking-tight">SkillHub</span>
+            </a>
+            <nav class="flex items-center gap-1">
+                <a href="/"
+                    class="px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-900 hover:bg-slate-100 transition-colors">Skills</a>
+                <a href="/admin"
+                    class="px-3 py-1.5 rounded-lg text-sm font-medium text-indigo-700 bg-indigo-50 transition-colors">Admin</a>
+            </nav>
+        </div>
+        <span class="text-xs font-medium text-gray-400 bg-slate-100 px-2.5 py-1 rounded-full">Admin panel</span>
+    </header>
+
+    <!-- Main content -->
+    <main class="max-w-6xl mx-auto px-6 py-8">
+
+        <!-- Page heading -->
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">Skills Management</h1>
+            <p class="text-sm text-gray-400 mt-1">Manage and remove published skill packages.</p>
+        </div>
+
+        {% if packages %}
+        <!-- Stats bar -->
+        <div class="flex items-center gap-6 mb-6">
+            <div class="bg-white border border-gray-100 rounded-xl px-5 py-3.5 flex items-center gap-3 shadow-sm">
+                <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 font-medium">Total skills</p>
+                    <p class="text-lg font-bold text-gray-900 leading-tight" id="skill-count">{{ packages | length }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills table -->
+        <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+            <table class="w-full text-sm" id="skills-table">
+                <thead class="bg-slate-50 border-b border-gray-100">
+                    <tr class="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                        <th class="text-left px-5 py-3.5">Skill</th>
+                        <th class="text-left px-5 py-3.5">Author</th>
+                        <th class="text-left px-5 py-3.5">Tags</th>
+                        <th class="text-left px-5 py-3.5">Latest</th>
+                        <th class="text-left px-5 py-3.5">Versions</th>
+                        <th class="text-left px-5 py-3.5">Created</th>
+                        <th class="px-5 py-3.5"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50" id="skills-tbody">
+                    {% for pkg in packages %}
+                    <tr id="row-{{ pkg.name | replace('.', '-') | replace('/', '-') }}"
+                        class="hover:bg-slate-50/70 transition-colors duration-100">
+                        <td class="px-5 py-4">
+                            <div class="flex items-center gap-2.5">
+                                <div
+                                    class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-100 to-violet-100 border border-indigo-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor"
+                                        stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-900">{{ pkg.name }}</p>
+                                    {% if pkg.description %}
+                                    <p class="text-xs text-gray-400 mt-0.5 max-w-xs truncate">{{ pkg.description }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-5 py-4 text-gray-500 text-xs">{{ pkg.author or '—' }}</td>
+                        <td class="px-5 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                {% for tag in pkg.tags %}
+                                <span class="px-2 py-0.5 text-xs bg-slate-100 text-slate-500 rounded-md font-medium">{{
+                                    tag }}</span>
+                                {% endfor %}
+                                {% if not pkg.tags %}
+                                <span class="text-gray-300 text-xs">—</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-5 py-4">
+                            {% if pkg.latest_version %}
+                            <span
+                                class="px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-600 rounded-md border border-indigo-100">v{{
+                                pkg.latest_version }}</span>
+                            {% else %}
+                            <span class="text-gray-300 text-xs">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-5 py-4 text-gray-500 text-xs font-medium">{{ pkg.version_count }}</td>
+                        <td class="px-5 py-4 text-gray-400 text-xs whitespace-nowrap">{{ pkg.created_at }}</td>
+                        <td class="px-5 py-4 text-right">
+                            <button
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 hover:border-red-200 transition-all duration-150"
+                                hx-delete="/admin/skills/{{ pkg.name }}" hx-target="closest tr" hx-swap="outerHTML"
+                                hx-confirm="Delete '{{ pkg.name }}'? This will permanently remove all versions and files."
+                                type="button">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                </svg>
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% else %}
+        <!-- Empty state -->
+        <div
+            class="bg-white border border-gray-100 rounded-2xl shadow-sm flex flex-col items-center justify-center py-20 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                <svg class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+            </div>
+            <p class="text-gray-500 font-medium text-sm mb-1">No skills published yet</p>
+            <p class="text-gray-400 text-xs">Skills pushed via the CLI will appear here.</p>
+        </div>
+        {% endif %}
+
+    </main>
+
+</body>
+
+</html>

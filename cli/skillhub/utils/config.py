@@ -30,4 +30,4 @@ def get_server_url(config: dict) -> str:
     server = config.get("server")
     if server:
         return server
-    return "http://localhost:8000"
+    raise click.ClickException("No server URL configured. Set env e.g. SKILLHUB_SERVER=<url> uv run skillhub list.")

@@ -5,5 +5,13 @@
   {% endfor %}
 </div>
 {% else %}
-<p class="text-gray-400 text-sm text-center py-12">No skills found.</p>
+<div class="flex flex-col items-center justify-center py-20 text-center">
+  <div class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+    <svg class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+    </svg>
+  </div>
+  <p class="text-gray-500 font-medium text-sm mb-1">No skills found</p>
+  <p class="text-gray-400 text-xs">Try adjusting your search or clearing the filters.</p>
+</div>
 {% endif %}

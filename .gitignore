@@ -8,4 +8,7 @@ cli/.pytest_cache/
 *.zip
 .github/
 **/**/__pycache__/
+*.db
+**/plans/*.md
+docs/
 

@@ -3,7 +3,8 @@ from skillhub.utils.platform import find_config_dir
 
 
 @click.command(name="setup")
-@click.argument("path")
+# @click.argument("path")
+@click.option("--path", default=".", help="Filter setup guides by path substring")
 def setup(path):
     config_dir = find_config_dir()
     matches = sorted(
