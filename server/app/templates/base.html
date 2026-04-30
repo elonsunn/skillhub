@@ -13,58 +13,118 @@
     <h1 class="text-2xl font-bold text-indigo-600">SkillHub</h1>
   </header>
 
-  <div class="flex h-[calc(100vh-64px)]">
+  <div class="flex flex-col h-[calc(100vh-64px)]">
 
-    <!-- Left column -->
-    <div class="flex flex-col flex-1 min-w-0">
-
-      <!-- Sticky toolbar -->
-      <div class="sticky top-0 bg-gray-50 border-b border-gray-200 px-6 py-4 z-10">
-        <input
-          type="text"
-          name="search"
-          id="search-input"
-          placeholder="Search skills..."
-          class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 mb-3"
-          hx-get="/ui/skills"
-          hx-trigger="input delay:300ms"
-          hx-include="[name='search'],[name='tag']"
-          hx-target="#skill-grid"
-        />
-        <input type="hidden" name="tag" id="active-tag" value="">
-        <div class="flex flex-wrap gap-2">
-          {% for tag in all_tags %}
-          <button
-            class="tag-pill px-3 py-1 rounded-full text-xs font-medium border transition-colors bg-white text-gray-600 border-gray-300 hover:border-indigo-400"
-            data-tag="{{ tag }}"
-            type="button"
-            onclick="selectTag('{{ tag }}')"
-          >{{ tag }}</button>
-          {% endfor %}
-        </div>
-      </div>
-
-      <!-- Skill grid -->
-      <div class="flex-1 overflow-y-auto px-6 py-4">
-        <div id="skill-grid">
-          {% include "partials/skill_grid.html" %}
-        </div>
+    <!-- Sticky toolbar -->
+    <div class="sticky top-0 bg-gray-50 border-b border-gray-200 px-6 py-4 z-10">
+      <input
+        type="text"
+        name="search"
+        id="search-input"
+        placeholder="Search skills..."
+        class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 mb-3"
+        hx-get="/ui/skills"
+        hx-trigger="input delay:300ms"
+        hx-include="[name='search'],[name='tag']"
+        hx-target="#skill-grid"
+      />
+      <div class="flex flex-wrap items-center gap-2">
+        <div id="tag-inputs"></div>
+        {% for tag in all_tags %}
+        <button
+          class="tag-pill px-3 py-1 rounded-full text-xs font-medium border transition-colors bg-white text-gray-600 border-gray-300 hover:border-indigo-400"
+          data-tag="{{ tag }}"
+          type="button"
+          onclick="selectTag('{{ tag }}')"
+        >{{ tag }}</button>
+        {% endfor %}
+        <button
+          id="clear-tags"
+          class="hidden px-3 py-1 rounded-full text-xs font-medium border border-red-300 text-red-500 hover:bg-red-50 transition-colors"
+          type="button"
+          onclick="clearTags()"
+        >Clear filters</button>
       </div>
     </div>
 
-    <!-- Right column: detail panel -->
-    <div id="detail-panel" class="w-2/5 border-l border-gray-200 bg-white overflow-y-auto">
+    <!-- Skill grid -->
+    <div class="flex-1 overflow-y-auto px-6 py-4">
+      <div id="skill-grid">
+        {% include "partials/skill_grid.html" %}
+      </div>
     </div>
 
   </div>
 
+  <!-- Drawer backdrop -->
+  <div
+    id="drawer-backdrop"
+    class="fixed inset-0 bg-black/40 z-20 hidden"
+    hx-get="/ui/empty"
+    hx-trigger="click"
+    hx-target="#drawer-content"
+  ></div>
+
+  <!-- Drawer -->
+  <div
+    id="drawer"
+    class="fixed top-0 right-0 h-full w-96 bg-white shadow-2xl z-30 transform translate-x-full transition-transform duration-300 overflow-y-auto"
+  >
+    <div id="drawer-content"></div>
+  </div>
+
   <script>
+    const selectedTags = new Set();
+
+    function openDrawer() {
+      document.getElementById('drawer').classList.replace('translate-x-full', 'translate-x-0');
+      document.getElementById('drawer-backdrop').classList.remove('hidden');
+    }
+
+    function closeDrawer() {
+      document.getElementById('drawer').classList.replace('translate-x-0', 'translate-x-full');
+      document.getElementById('drawer-backdrop').classList.add('hidden');
+    }
+
+    document.addEventListener('htmx:afterSwap', (e) => {
+      if (e.detail.target.id === 'drawer-content') {
+        if (e.detail.target.innerHTML.trim() === '') {
+          closeDrawer();
+        } else {
+          openDrawer();
+        }
+      }
+    });
+
+    function _syncTagInputs() {
+      const container = document.getElementById('tag-inputs');
+      container.innerHTML = '';
+      selectedTags.forEach(t => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'tag';
+        input.value = t;
+        container.appendChild(input);
+      });
+    }
+
+    function _refreshGrid() {
+      const search = document.getElementById('search-input').value;
+      htmx.ajax('GET', '/ui/skills', {
+        target: '#skill-grid',
+        swap: 'innerHTML',
+        values: { search, tag: [...selectedTags] },
+      });
+    }
+
     function selectTag(tag) {
-      const input = document.getElementById('active-tag');
-      const newTag = input.value === tag ? '' : tag;
-      input.value = newTag;
+      if (selectedTags.has(tag)) {
+        selectedTags.delete(tag);
+      } else {
+        selectedTags.add(tag);
+      }
       document.querySelectorAll('.tag-pill').forEach(pill => {
-        const isActive = pill.dataset.tag === newTag && newTag !== '';
+        const isActive = selectedTags.has(pill.dataset.tag);
         pill.classList.toggle('bg-indigo-600', isActive);
         pill.classList.toggle('text-white', isActive);
         pill.classList.toggle('border-indigo-600', isActive);
@@ -72,12 +132,20 @@
         pill.classList.toggle('text-gray-600', !isActive);
         pill.classList.toggle('border-gray-300', !isActive);
       });
-      const search = document.getElementById('search-input').value;
-      htmx.ajax('GET', '/ui/skills', {
-        target: '#skill-grid',
-        swap: 'innerHTML',
-        values: { search: search, tag: newTag },
+      document.getElementById('clear-tags').classList.toggle('hidden', selectedTags.size === 0);
+      _syncTagInputs();
+      _refreshGrid();
+    }
+
+    function clearTags() {
+      selectedTags.clear();
+      document.querySelectorAll('.tag-pill').forEach(pill => {
+        pill.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600');
+        pill.classList.add('bg-white', 'text-gray-600', 'border-gray-300');
       });
+      document.getElementById('clear-tags').classList.add('hidden');
+      document.getElementById('tag-inputs').innerHTML = '';
+      _refreshGrid();
     }
   </script>
 

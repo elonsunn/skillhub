@@ -117,3 +117,22 @@ def test_skill_grid_no_tags_returns_all(client, db_session):
     response = client.get("/ui/skills")
     assert "pkg-a" in response.text
     assert "pkg-b" in response.text
+
+
+def test_index_has_drawer_elements(client):
+    response = client.get("/")
+    assert 'id="drawer"' in response.text
+    assert 'id="drawer-backdrop"' in response.text
+    assert 'id="drawer-content"' in response.text
+
+
+def test_skill_card_targets_drawer(client, db_session):
+    _seed_pkg(db_session, name="my-skill")
+    response = client.get("/ui/skills")
+    assert 'hx-target="#drawer-content"' in response.text
+
+
+def test_skill_detail_close_targets_drawer(client, db_session):
+    _seed_pkg(db_session, name="my-skill")
+    response = client.get("/ui/skills/my-skill")
+    assert 'hx-target="#drawer-content"' in response.text
