@@ -344,3 +344,59 @@ def test_push_invalid_semver_rejected(client):
         files={"file": ("f.zip", _make_zip(), "application/zip")},
     )
     assert response.status_code == 422
+
+
+def test_push_stores_contents(client):
+    meta = _json.dumps({
+        "version": "1.0.0", "message": "init",
+        "description": "", "author": "", "tags": ["t"],
+        "contents": ["skills/skilla", "agents/my-agent"],
+    })
+    client.post(
+        "/api/packages/with-contents",
+        data={"metadata": meta},
+        files={"file": ("f.zip", _make_zip(), "application/zip")},
+    )
+    response = client.get("/api/packages/with-contents")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["versions"][0]["contents"] == ["skills/skilla", "agents/my-agent"]
+
+
+def test_push_without_contents_defaults_empty_list(client):
+    meta = _json.dumps({
+        "version": "1.0.0", "message": "init",
+        "description": "", "author": "", "tags": ["t"],
+    })
+    client.post(
+        "/api/packages/no-contents",
+        data={"metadata": meta},
+        files={"file": ("f.zip", _make_zip(), "application/zip")},
+    )
+    response = client.get("/api/packages/no-contents")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["versions"][0]["contents"] == []
+
+
+def test_get_package_returns_contents_per_version(client):
+    zip_data = _make_zip()
+    meta_v1 = _json.dumps({
+        "version": "1.0.0", "message": "init",
+        "description": "", "author": "", "tags": ["t"],
+        "contents": ["skills/foo"],
+    })
+    meta_v2 = _json.dumps({
+        "version": "1.0.1", "message": "update",
+        "description": "", "author": "", "tags": ["t"],
+        "contents": ["skills/foo", "skills/bar"],
+    })
+    client.post("/api/packages/multi-ver", data={"metadata": meta_v1}, files={"file": ("f.zip", zip_data, "application/zip")})
+    client.post("/api/packages/multi-ver", data={"metadata": meta_v2}, files={"file": ("f.zip", zip_data, "application/zip")})
+
+    response = client.get("/api/packages/multi-ver")
+    data = response.json()
+    assert data["versions"][0]["version"] == "1.0.1"
+    assert data["versions"][0]["contents"] == ["skills/foo", "skills/bar"]
+    assert data["versions"][1]["version"] == "1.0.0"
+    assert data["versions"][1]["contents"] == ["skills/foo"]

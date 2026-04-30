@@ -100,6 +100,7 @@ def push_package(
     description = meta.get("description", "")
     author = meta.get("author", "")
     tags = meta.get("tags", [])
+    contents = meta.get("contents", [])
 
     if not version or not message:
         raise HTTPException(status_code=422, detail="metadata must include 'version' and 'message'")
@@ -139,6 +140,7 @@ def push_package(
         version=version,
         message=message,
         file_path=rel_path,
+        contents=json.dumps(contents),
     ))
 
     db.query(Tag).filter(Tag.package_id == pkg.id).delete()
@@ -165,6 +167,7 @@ def get_package(name: str, db: Session = Depends(get_db)):
                 "version": v.version,
                 "message": v.message,
                 "created_at": v.created_at.isoformat() if v.created_at else None,
+                "contents": json.loads(v.contents) if v.contents else [],
             }
             for v in sorted(pkg.versions, key=lambda v: SemVer(v.version), reverse=True)
         ],
